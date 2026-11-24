@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tic Tac Toe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#EEF2F6;--grid:#CFDAE6;--card:#FFFFFF;--ink:#1F3A5F;--red:#D2453B;--text:#26303C;--muted:#5C6B7C;--line:#B8C6D6;--win:#F2B84B}
+@media (prefers-color-scheme:dark){:root{--paper:#12171F;--grid:#1D2733;--card:#19212C;--ink:#8FB4E8;--red:#F0786C;--text:#E6ECF3;--muted:#9AA8B8;--line:#33425A;--win:#E0A93B}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--text);background:var(--paper);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+.wrap{max-width:780px;margin:0 auto;padding:28px 16px 48px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:20px}
+h1{margin:0;font:400 44px/1 "Patrick Hand","Segoe Print","Bradley Hand",cursive;color:var(--ink)}
+h2{margin:0 0 8px;font-size:16px}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:20px}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit}
+input,select{width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:4px;background:var(--paper)}
+label{display:block;margin:12px 0 4px;color:var(--muted);font-size:14px}
+.btn{padding:9px 16px;border:2px solid var(--ink);border-radius:4px;background:var(--ink);color:var(--card);cursor:pointer}
+.btn.quiet{background:transparent;color:var(--ink)}
+:focus-visible{outline:3px solid var(--win);outline-offset:2px}
+#auth{max-width:380px;margin:40px auto 0}
+#auth .btn{margin-top:18px;width:100%}
+.switch{margin-top:12px;text-align:center;font-size:14px}
+.link{background:none;border:0;color:var(--ink);text-decoration:underline;cursor:pointer;padding:0}
+.error{min-height:22px;margin-top:10px;color:var(--red);font-size:14px}
+.layout{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:720px){.layout{grid-template-columns:auto 1fr}}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:16px}
+.controls>div{flex:1 1 130px}.controls label{margin-top:0}
+#status{margin:14px 0 0;text-align:center;font:400 28px/1.2 "Patrick Hand","Segoe Print",cursive;color:var(--ink);min-height:34px}
+#board{display:grid;grid-template-columns:repeat(3,1fr);width:min(100%,336px);margin:0 auto}
+.cell{aspect-ratio:1;background:none;border:0;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);padding:10px;cursor:pointer}
+.cell:nth-child(3n){border-right:0}.cell:nth-child(n+7){border-bottom:0}
+.cell:disabled{cursor:default}.cell:not(:disabled):hover{background:var(--paper)}
+.cell.win{background:color-mix(in srgb,var(--win) 35%,transparent)}
+.cell svg{width:100%;height:100%;fill:none;stroke-width:6;stroke-linecap:round}
+.mark-x{stroke:var(--red)}.mark-o{stroke:var(--ink)}
+.cell.new path,.cell.new circle{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .35s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.cell.new path,.cell.new circle{animation:none;stroke-dashoffset:0}}
+.stats{display:flex;gap:18px;margin-bottom:14px}
+.stats b{display:block;font:400 30px/1 "Patrick Hand","Segoe Print",cursive;color:var(--ink)}
+.stats span{font-size:13px;color:var(--muted)}
+#history{list-style:none;margin:0;padding:0;max-height:210px;overflow:auto}
+#history li{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+.empty{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>Tic Tac Toe</h1><div id="who" hidden><span id="name"></span> <button class="link" id="logout">Log out</button></div></header>
+
+<section id="auth" class="card">
+  <h2 id="auth-title">Log in</h2>
+  <form id="auth-form">
+    <label for="username">Username</label><input id="username" autocomplete="username" required>
+    <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required>
+    <div class="error" id="auth-error" role="alert"></div>
+    <button class="btn" id="auth-submit">Log in</button>
+  </form>
+  <div class="switch"><span id="switch-text">New here?</span> <button class="link" id="switch">Create an account</button></div>
+</section>
+
+<section id="play" hidden>
+  <div class="layout">
+    <div class="card">
+      <div class="controls">
+        <div><label for="mode">Opponent</label><select id="mode"><option value="ai">Computer</option><option value="two">Second player</option></select></div>
+        <div id="diff-box"><label for="difficulty">Difficulty</label><select id="difficulty"><option value="easy">Easy</option><option value="hard" selected>Hard</option></select></div>
+        <button class="btn" id="new">New game</button>
+      </div>
+      <div id="board" role="group" aria-label="Game board"></div>
+      <p id="status" aria-live="polite"></p>
+      <div class="error" id="play-error" role="alert"></div>
+    </div>
+    <div class="card">
+      <h2>Your record against the computer</h2>
+      <div class="stats"><div><b id="wins">0</b><span>Wins</span></div><div><b id="draws">0</b><span>Draws</span></div><div><b id="losses">0</b><span>Losses</span></div></div>
+      <h2>Recent games</h2>
+      <ul id="history"></ul>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let game = null, prev = ".".repeat(9), authMode = "login";
+
+async function api(path, method = "GET", body) {
+  const res = await fetch("/api/" + path, {method, headers: {"Content-Type": "application/json"},
+    body: method === "GET" ? undefined : JSON.stringify(body || {})});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Something went wrong. Try again.");
+  return data;
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const login = mode === "login";
+  $("#auth-title").textContent = $("#auth-submit").textContent = login ? "Log in" : "Create account";
+  $("#switch-text").textContent = login ? "New here?" : "Already have an account?";
+  $("#switch").textContent = login ? "Create an account" : "Log in";
+  $("#password").autocomplete = login ? "current-password" : "new-password";
+  $("#auth-error").textContent = "";
+}
+
+const markX = '<svg viewBox="0 0 60 60" class="mark-x"><path pathLength="1" d="M10 10L50 50M50 10L10 50"/></svg>';
+const markO = '<svg viewBox="0 0 60 60" class="mark-o"><circle pathLength="1" cx="30" cy="30" r="20"/></svg>';
+
+function buildBoard() {
+  const board = $("#board");
+  for (let i = 0; i < 9; i++) {
+    const b = document.createElement("button");
+    b.className = "cell"; b.dataset.i = i;
+    b.addEventListener("click", () => play(i));
+    board.appendChild(b);
+  }
+}
+
+function statusText(g) {
+  if (g.status === "draw") return "It's a draw";
+  if (g.status === "won") return g.mode === "ai" ? (g.winner === "X" ? "You win" : "Computer wins") : g.winner + " wins";
+  return g.mode === "ai" ? "Your move" : g.turn + " to move";
+}
+
+function render() {
+  document.querySelectorAll(".cell").forEach((b, i) => {
+    const c = game.board[i], r = Math.floor(i / 3) + 1, col = i % 3 + 1;
+    b.innerHTML = c === "X" ? markX : c === "O" ? markO : "";
+    b.disabled = c !== "." || game.status !== "playing";
+    b.classList.toggle("new", c !== "." && prev[i] === ".");
+    b.classList.toggle("win", !!game.line && game.line.includes(i));
+    b.setAttribute("aria-label", `Row ${r}, column ${col}, ${c === "." ? "empty" : c}`);
+  });
+  $("#status").textContent = statusText(game);
+  prev = game.board.join("");
+}
+
+async function play(i) {
+  $("#play-error").textContent = "";
+  try {
+    game = await api(`games/${game.id}/move`, "POST", {cell: i});
+    render();
+    if (game.status !== "playing") refreshSide();
+  } catch (e) { $("#play-error").textContent = e.message; }
+}
+
+async function newGame() {
+  $("#play-error").textContent = "";
+  game = await api("games", "POST", {mode: $("#mode").value, difficulty: $("#difficulty").value});
+  prev = ".".repeat(9);
+  render();
+}
+
+async function refreshSide() {
+  const [stats, history] = await Promise.all([api("stats"), api("history")]);
+  $("#wins").textContent = stats.wins; $("#draws").textContent = stats.draws; $("#losses").textContent = stats.losses;
+  const list = $("#history"); list.innerHTML = "";
+  if (!history.length) { list.innerHTML = '<li class="empty">No games yet. Make your first move.</li>'; return; }
+  for (const g of history) {
+    const li = document.createElement("li"), who = document.createElement("span"), res = document.createElement("span");
+    who.textContent = g.mode === "ai" ? `Computer, ${g.difficulty}` : "Two players";
+    res.textContent = g.status === "playing" ? "In progress" : g.status === "draw" ? "Draw"
+      : g.mode === "ai" ? (g.winner === "X" ? "Win" : "Loss") : g.winner + " won";
+    li.append(who, res); list.appendChild(li);
+  }
+}
+
+async function enter(username) {
+  $("#auth").hidden = true; $("#play").hidden = false; $("#who").hidden = false;
+  $("#name").textContent = username;
+  await newGame(); await refreshSide();
+}
+
+$("#auth-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    const data = await api(authMode, "POST", {username: $("#username").value, password: $("#password").value});
+    $("#password").value = "";
+    await enter(data.username);
+  } catch (err) { $("#auth-error").textContent = err.message; }
+});
+$("#switch").addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+$("#logout").addEventListener("click", async () => { await api("logout", "POST"); location.reload(); });
+$("#new").addEventListener("click", newGame);
+$("#mode").addEventListener("change", () => { $("#diff-box").hidden = $("#mode").value !== "ai"; newGame(); });
+$("#difficulty").addEventListener("change", newGame);
+
+buildBoard();
+api("me").then(d => enter(d.username)).catch(() => {});
+</script>
+</body>
+</html>
